@@ -12,7 +12,6 @@ class Register {
 	}
 
 	public function write($value) {
-		$cmd1 = new Translator('mov ' . $this->value . ', ' . $value);
-		$cmd1->processCommand($this->value);
+        $this->value = $value;
 	}
 }
