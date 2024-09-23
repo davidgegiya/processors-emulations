@@ -1,10 +1,6 @@
 <?php
 
 class Executor {
-	private $flags = [
-		'ZF' => 0, // флаг нуля
-		'SF' => 0, // флаг знака
-	];
 
 	private $operand1;
 	private $operand2;
@@ -23,57 +19,33 @@ class Executor {
 
 
 	public function execute() {
-		$this->resetFlags();
 		switch ($this->command) {
 			case COMMANDS::mov:
-				$res = $this->mov();
-				break;
-			case COMMANDS::add:
-				$res = $this->add();
-				break;
-			case COMMANDS::sub:
-				$res = $this->sub();
+				$res = $this->encode(0);
 				break;
 			case COMMANDS::cmp:
-				$res = $this->cmp();
+				$res = $this->encode(1);
 				break;
+            case COMMANDS::jmp:
+                $res = $this->encode(2);
+                break;
+            case COMMANDS::incr:
+                $res = $this->encode(3);
+                break;
+            case COMMANDS::abrt:
+                $res = $this->encode(4);
+                break;
+            case COMMANDS::frcjmp:
+                $res = $this->encode(5);
+                break;
+            case COMMANDS::cpy:
+                $res = $this->encode(6);
+                break;
 		}
 		return $res;
 	}
-
-	private function resetFlags() {
-		$this->flags = [
-			'ZF' => 0,
-			'SF' => 0,
-		];
-	}
-
-	private function mov() {
-		return $this->operand2;
-	}
-
-	private function add() {
-		return $this->operand1 + $this->operand2;
-	}
-
-	private function sub() {
-		$res = $this->operand1 - $this->operand2;
-		if (!$res) {
-			$this->flags['ZF'] = 1;
-		} else if ($res < 0) {
-			$this->flags['SF'] = 1;
-		}
-		return $res;
-	}
-
-	private function cmp() {
-		$this->sub();
-		if($this->flags['ZF'] === 1) {
-			return EQUALITY::eq;
-		} elseif($this->flags['SF'] === 1) {
-			return EQUALITY::lt;
-		} else {
-			return EQUALITY::gt;
-		}
-	}
+    private function encode($command)
+    {
+        return ($command << 16) | ($this->operand1 << 8) | $this->operand2;
+    }
 }

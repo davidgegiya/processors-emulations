@@ -1,30 +1,30 @@
 #!/usr/bin/env php
 <?php
 require __DIR__ . '/loader.php';
-$memory = new Memory([10, 50, 30, 40]);
+$numbers = [6, 10, 50, 90, 40, 60, 70];
+$memory = new Memory($numbers);
 
 $processor = new Processor($memory);
-$program = [
-    ['opCode' => 0x000, 'args' => ['R0', 0]],  // R0 = memory[0] (текущий максимум)
-
-    ['opCode' => 0x000, 'args' => ['R1', 1]],  // R1 = memory[1]
-    ['opCode' => 0x001,  'args' => ['R1', 'R0']], // Сравниваем R1 с R0 (R3 = R1 - R0)
-    ['opCode' => 0x002, 'args' => [6]], // Если R1 < R0, переход к следующему элементу
-    ['opCode' => 0x000, 'args' => ['R0', 1]],  // Если R1 > R0, R0 = R1 (обновление максимума)
-
-    ['opCode' => 0x000, 'args' => ['R1', 2]],  // Аналогично для memory[2]
-    ['opCode' => 0x001,  'args' => ['R1', 'R0']],
-    ['opCode' => 0x002, 'args' => [10]],
-    ['opCode' => 0x000, 'args' => ['R0', 2]],
-
-    ['opCode' => 0x000, 'args' => ['R1', 3]],  // Аналогично для memory[3]
-    ['opCode' => 0x001,  'args' => ['R1', 'R0']],
-    ['opCode' => 0x002, 'args' => [13]],
-    ['opCode' => 0x000, 'args' => ['R0', 3]],
-];
+$program = [];
+$program[] = (new Translator('mov R4, R5'))->processCommand();
+$program[] = (new Translator('incr R5'))->processCommand();
+$program[] = (new Translator('mov R0, R5'))->processCommand();
+$program[] = (new Translator('incr R5'))->processCommand();
+$program[] = (new Translator('mov R1, R5'))->processCommand();
+$program[] = (new Translator('cmp R1, R0'))->processCommand();
+$program[] = (new Translator('jmp 8, R1'))->processCommand();
+$program[] = (new Translator('mov R0, R5'))->processCommand();
+$program[] = (new Translator('cpy R2, R4'))->processCommand();
+$program[] = (new Translator('cmp R4, R5'))->processCommand();
+$program[] = (new Translator('jmp 12, R4'))->processCommand();
+$program[] = (new Translator('frcjmp 13'))->processCommand();
+$program[] = (new Translator('abrt'))->processCommand();
+$program[] = (new Translator('cpy R4, R2'))->processCommand();
+$program[] = (new Translator('incr R5'))->processCommand();
+$program[] = (new Translator('frcjmp 4'))->processCommand();
 
 $processor->loadProgram($program);
 $processor->execute();
 
-echo "Maximum value found: " . $processor->getRegisterValue('R0')->read() . "\n";
+echo "Maximum value found: " . $processor->getRegisterValue(0)->read() . "\n";
 

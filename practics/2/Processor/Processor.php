@@ -1,72 +1,89 @@
 <?php
 
 class Processor {
-	private $registers = [];
-	private $memory;
-	private $programCounter = 0;
+    private $registers = [];
+    private $memory;
+    private $programCounter = 0;
 
-	public function __construct($memory) {
-		$this->memory = $memory;
-		$this->registers = [
-			'R0' => new Register(), // Для хранения максимума
-			'R1' => new Register(), // Для хранения текущего значения
-			'R2' => new Register(), // Вспомогательный регистр
-			'R3' => new Register(),  // Для хранения результата сравнения
-		];
-	}
+    public function __construct($memory) {
+        $this->memory = $memory;
+        $this->registers = [
+            new Register(), // Для хранения максимума
+            new Register(), // Для хранения текущего значения
+            new Register(), // Вспомогательный регистр
+            new Register(),  // Для хранения результата сравнения
+            new Register(),  // Для хранения длины массива
+            new Register(),  // Для хранения текущего итератора gпроцессора
+        ];
+    }
 
-	public function loadProgram($program) {
-		$this->program = $program;
-	}
+    public function loadProgram($program) {
+        $this->program = $program;
+    }
 
-	public function execute() {
-		while ($this->programCounter < count($this->program)) {
-			$command = $this->program[$this->programCounter];
-			$this->executeCommand($command);
-			$cmd1 = new Translator('add ' . $this->programCounter . ', ' . 1);
-			$cmd1->processCommand($this->programCounter);
-		}
-	}
+    public function execute() {
+        while ($this->programCounter != -1) {
+            $command = $this->program[$this->programCounter];
+            $this->executeCommand($command);
+            $this->programCounter++;
+        }
+    }
 
-	public function getRegisterValue($index) {
-		return $this->registers[$index];
-	}
+    public function getRegisterValue($index) {
+        return $this->registers[$index];
+    }
 
-	private function executeCommand($command) {
-		$opCode = $command['opCode'];
-		$args = $command['args'];
+    private function executeCommand($command) {
+        $opCode = $this->decodeCommand($command);
 
-		switch ($opCode) {
-			case 0x000:
-				$this->registers[$args[0]]->write($this->memory->read($args[1]));
-				break;
-			case 0x001:
-				$cmd1 = new Translator('sub ' . $this->registers[$args[0]]->read() . ', ' . $this->registers[$args[1]]->read());
-				$cmd1->processCommand($result);
-				$this->registers['R3']->write($result);
-				break;
-			case 0x002:
-				$cmd1 = new Translator('cmp ' . $this->registers['R3']->read() . ', ' . 0);
-				$cmd1->processCommand($result);
-				if ($result == EQUALITY::lt) {
-					$cmd2 = new Translator('sub ' . $args[0] . ', ' . 1);
-					$cmd2->processCommand($this->programCounter);
-				}
-				break;
-			default:
-				throw new Exception("Unknown command: $opCode");
-		}
+        switch ($opCode[0]) {
+            case 0: // Присвоение
+                $this->registers[$opCode[1]]->write($this->memory->read($this->registers[$opCode[2]]->read()));
+                break;
+            case 1: // Разница
+                $result = $this->registers[$opCode[1]]->read() - $this->registers[$opCode[2]]->read();
+                $this->registers[$opCode[1]]->write($result);
+                break;
+            case 2: // JUMP TO по условию
+                if ($this->registers[$opCode[2]]->read() < 0) {
+                    $this->programCounter = $opCode[1] - 1;
+                }
+                break;
+            case 3: // Инкремент
+                $value = $this->registers[$opCode[1]]->read();
+                $this->registers[$opCode[1]]->write(++$value);
+                break;
+            case 4: // Abort
+                $this->programCounter = -2;
+                break;
+            case 5: // Jump TO без условия
+                $this->programCounter = $opCode[1] - 1;
+                break;
+            case 6: // Запись из регистра в регистр
+                $this->registers[$opCode[1]]->write($this->registers[$opCode[2]]->read());
+                break;
+            default:
+                throw new Exception("Unknown command: $opCode");
+        }
 
-		$this->displayState($command);
-	}
+        $this->displayState($command);
+    }
 
-	private function displayState($command) {
-		echo "Command: " . json_encode($command) . "\n";
-		echo "Registers: \n";
-		foreach ($this->registers as $name => $register) {
-			echo "$name: " . $register->read() . "\n";
-		}
-		echo "Memory: " . json_encode($this->memory->getData()) . "\n";
-		echo "-------------------------------------\n";
-	}
+    private function decodeCommand($command) {
+        $byte1 = $command & 0xFF; // Маска младшего байта (0xFF - это 255 в десятичной)
+        $byte2 = ($command >> 8) & 0xFF; // Сдвиг на 8 бит вправо и маска на 1 байт
+        $byte3 = ($command >> 16) & 0xFF; // Сдвиг на 16 бит вправо и маска на 1 байт
+        return array_reverse([$byte1, $byte2, $byte3]);
+    }
+
+    private function displayState($command) {
+        echo "Command: " . json_encode($command) . "\n";
+        echo "Registers: \n";
+        foreach ($this->registers as $name => $register) {
+            echo "$name: " . $register->read() . "\n";
+        }
+        echo "Memory: " . json_encode($this->memory->getData()) . "\n";
+        echo "ProgramCounter: " . $this->programCounter . "\n";
+        echo "-------------------------------------\n";
+    }
 }
