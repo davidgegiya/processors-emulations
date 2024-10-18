@@ -2,6 +2,7 @@
 
 class Processor {
 	private $registers = [];
+    private $labels = [];
 	private $memory;
 	private $programCounter = 0;
 
@@ -22,6 +23,7 @@ class Processor {
 	}
 
 	public function execute() {
+        $this->getLabels();
         while ($this->programCounter != -1) {
             $command = $this->program[$this->programCounter];
             $this->executeCommand($command);
@@ -62,6 +64,9 @@ class Processor {
             case 6: // Запись из регистра в регистр
                 $this->registers[$opCode[1]]->write($this->registers[$opCode[2]]->read());
                 break;
+            case 7: // Запись из регистра в память
+                $this->memory[$opCode[1]]->write($this->registers[$opCode[2]]->read());
+                break;
             default:
 				throw new Exception("Unknown command: $opCode");
 		}
@@ -74,6 +79,16 @@ class Processor {
         $byte2 = ($command >> 8) & 0xFF; // Сдвиг на 8 бит вправо и маска на 1 байт
         $byte3 = ($command >> 16) & 0xFF; // Сдвиг на 16 бит вправо и маска на 1 байт
         return array_reverse([$byte1, $byte2, $byte3]);
+    }
+
+    private function getLabels() {
+        foreach ($this->program as $command) {
+            $label = explode('|', $command);
+            if(count($label) > 1) {
+                $label = str_replace(' ', '', $label[0]);
+                $labels[] = $label[1];
+            }
+        }
     }
 
 	private function displayState($command) {
